@@ -85,10 +85,10 @@ EpisodicPivotAnalyser follows a **hybrid microservices + shared library architec
                            │ (Repositories)
          ┌─────────────────┼─────────────────┐
          │                 │                 │
-    ┌────▼────────┐  ┌─────▼──────┐  ┌──────▼──────┐
-    │  Common Lib │  │  Alerter   │  │  EarningsCsv│
-    │  (Core)     │  │ (Service)  │  │  Exporter   │
-    │ ├ Rules     │  │ Runs 10min │  └─────────────┘
+    ┌────▼────────┐  ┌─────▼──────┐  ┌───────▼──────┐
+    │  Common Lib │  │  Alerter   │  │  EarningsCsv │
+    │  (Core)     │  │ (Service)  │  │  Exporter    │
+    │ ├ Rules     │  │ Runs 10min │  └──────────────┘
     │ ├ SellRules │  │ Post-Market│
     │ ├ Services  │  └────┬───────┘
     │ └ Models    │       │
