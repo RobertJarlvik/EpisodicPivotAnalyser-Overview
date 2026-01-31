@@ -118,31 +118,31 @@ Every trading rule in the system is:
 
 The development of this platform represents **thousands of hours of dedicated research**:
 
-1. **Data Collection & Cleaning** (500+ hours)
+1. **Data Collection & Cleaning** 
    - Aggregation of historical data from multiple sources
    - Data quality validation and cleansing
    - Gap adjustment and split handling
    - Volume normalization
 
-2. **Strategy Development** (1000+ hours)
+2. **Strategy Development** 
    - Hypothesis generation and testing
    - Rule development and optimization
    - Parameter tuning and sensitivity analysis
    - Risk management integration
 
-3. **Backtesting & Validation** (800+ hours)
+3. **Backtesting & Validation**
    - Historical simulation across different market conditions
    - Walk-forward testing and cross-validation
    - Statistical analysis of results
    - Edge verification and robustness testing
 
-4. **Machine Learning Model Development** (700+ hours)
+4. **Machine Learning Model Development**
    - Feature engineering and selection
    - Model training and hyperparameter optimization
    - Cross-validation and out-of-sample testing
    - Model deployment and monitoring
 
-5. **System Architecture & Engineering** (1000+ hours)
+5. **System Architecture & Engineering** 
    - Microservices design and implementation
    - Database optimization for time-series data
    - Real-time data pipeline development
