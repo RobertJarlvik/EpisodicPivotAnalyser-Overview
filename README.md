@@ -66,14 +66,14 @@ The **Episodic Pivot** strategy focuses on:
 EpisodicPivotAnalyser follows a **hybrid microservices + shared library architecture** with clear separation of concerns:
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                     FRONTENDS (User Layer)                     │
-├──────────────────┬──────────────────┬──────────────────────────┤
-│  FrontEnd        │  SellRulesFrontEnd│  Gui (Next.js)          │
-│  (React+TS+Vite) │  (React+TS+Vite) │  (Next.js+Tailwind)      │
-└────────┬─────────┴────────┬─────────┴───────────┬──────────────┘
-         │                  │                     │ HTTP/REST
-         └──────────────────┼─────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     FRONTENDS (User Layer)                      │
+├──────────────────┬───────────────────┬──────────────────────────┤
+│  FrontEnd        │  SellRulesFrontEnd│  Training UI (Next.js)   │
+│  (React+TS+Vite) │  (React+TS+Vite)  │  (Next.js+Tailwind)      │
+└────────┬─────────┴────────┬──────────┴───────────┬──────────────┘
+         │                  │                      │ HTTP/REST
+         └──────────────────┼──────────────────────┘
                            │
                 ┌──────────▼──────────────┐
                 │  StockData.Api (ASP.NET)│◄─── Port 5237
@@ -94,7 +94,7 @@ EpisodicPivotAnalyser follows a **hybrid microservices + shared library architec
     │ └ Models    │       │
     └────┬────────┘       │ (MassTransit)
          │                │
-    ┌────▼────────────────▼─────────┐
+    ┌────▼────────────────▼──────────┐
     │   SQL Server Database          │
     │  ├ AlertResult                 │
     │  ├ EarningsWhisper             │
@@ -105,8 +105,8 @@ EpisodicPivotAnalyser follows a **hybrid microservices + shared library architec
          Optional Infrastructure:
     ┌─────────────────────────────────┐
     │  RabbitMQ (Message Bus)         │
-    │  Redis (Caching)               │
-    │  Aspire (Local Orchestration)  │
+    │  Redis (Caching)                │
+    │  Aspire (Local Orchestration)   │
     └─────────────────────────────────┘
 ```
 
