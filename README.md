@@ -214,7 +214,13 @@ The backtesting engine processes millions of historical data points to ensure st
 #### 1. Sell Rules Analysis
 Visual analysis of historical earnings gap-up events and their outcomes.
 
-![Sell Rules Analysis](src/EpisodicPivotAnalyser.SellRulesFrontEnd/screenshots/sell-rules-analysis.png)
+<img width="1445" height="1331" alt="image" src="https://github.com/user-attachments/assets/34b9f733-9ea2-4bcd-a379-ae02c193940d" />
+
+<img width="1456" height="1148" alt="image" src="https://github.com/user-attachments/assets/5320785b-9ff6-49de-b004-4733c79fa200" />
+
+<img width="1460" height="954" alt="image" src="https://github.com/user-attachments/assets/79ac5986-11f2-437a-8e6d-4fe2b87c0841" />
+
+<img width="1455" height="434" alt="image" src="https://github.com/user-attachments/assets/e984585b-f6be-48a6-8193-020581f3b3b5" />
 
 **Features**:
 - List of historical gap-up events with stock cards
