@@ -28,8 +28,8 @@ The system processes substantial historical market data to ensure statistical si
 
 - **~10 years** of daily OHLC (Open, High, Low, Close) price data per stock
 - **100,000+** historical earnings gap-up events analyzed
-- **1,000,000+** individual price bars processed
-- **10,000,000+** rule evaluations performed during backtesting
+- **800,000,000+** individual price bars processed
+- **100,000,000+** rule evaluations performed during backtesting
 - **5,000,000+** ML training data points for sell rule optimization
 
 This scale ensures that backtested strategies are validated across multiple market cycles, including bull markets, bear markets, and high-volatility periods.
