@@ -5,6 +5,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![SignalR](https://img.shields.io/badge/SignalR-Real--time-blue.svg)](https://dotnet.microsoft.com/apps/aspnet/signalr)
 
+![My GitHub Game](game.gif)
+
 A production-grade algorithmic trading system that combines deterministic rule engines with machine learning to identify and evaluate stock trading opportunities. The system analyzes earnings gap-up events using 16+ buy rules and 17+ sell rules, all backtested against up to 10 years of historical market data.
 
 ---
