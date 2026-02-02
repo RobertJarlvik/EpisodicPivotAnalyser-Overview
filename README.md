@@ -274,6 +274,8 @@ Track your stock purchases and receive automatic sell signal alerts via email wh
 
 **Role**: Main monitoring dashboard for viewing real-time alerts and system status.
 
+<img width="1546" height="1326" alt="image" src="https://github.com/user-attachments/assets/277e9ca1-51ad-4350-9db7-cf8e54af6c5f" />
+
 **Architecture**: React 19 + TypeScript SPA with Material-UI.
 
 **Features**:
