@@ -409,18 +409,5 @@ Interactive tool for testing combinations of sell rules and analyzing synergisti
 
 ---
 
-## Documentation
-
-Project-specific documentation:
-- [ML Optimizer Details](src/EpisodicPivotAnalyser.ML.SellRuleOptimizer/README.md)
-- [Primary Dashboard](src/EpisodicPivotAnalyser.FrontEnd/README.md)
-- [Sell Rules Frontend](src/EpisodicPivotAnalyser.SellRulesFrontEnd/README.md)
-- [Training Dashboard](src/EpisodicPivotAnalyser.TrainingDashboard/README.md)
-- [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-- [Training Improvements](TRAINING_IMPROVEMENTS.md)
-- [HTML Files Explanation](HTML_FILES_EXPLANATION.md)
-
----
-
 **Inspired by**: Qullamaggie (Episodic Pivot), Mark Minervini (SEPA), William O'Neil (CAN SLIM)
 
