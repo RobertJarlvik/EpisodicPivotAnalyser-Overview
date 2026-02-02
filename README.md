@@ -80,8 +80,8 @@ This scale ensures that backtested strategies are validated across multiple mark
               │ • Strategy Pattern │
               └─────────┬──────────┘
                         │
-         ┌──────────────┴────────────────────┐
-         │                                   │
+         ┌──────────────┴───────────────────┐
+         │                                  │
     ┌────▼────────┐   ┌────────────┐   ┌────▼────────┐
     │ SQL Server  │   │  RabbitMQ  │   │   Redis     │
     │             │   │            │   │             │
