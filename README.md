@@ -3,504 +3,424 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![React](https://img.shields.io/badge/React-18%2F19-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![SignalR](https://img.shields.io/badge/SignalR-Real--time-blue.svg)](https://dotnet.microsoft.com/apps/aspnet/signalr)
+
+A production-grade algorithmic trading system that combines deterministic rule engines with machine learning to identify and evaluate stock trading opportunities. The system analyzes earnings gap-up events using 16+ buy rules and 17+ sell rules, all backtested against up to 10 years of historical market data.
 
 ---
 
-### TL;DR
+## System Overview
 
-**EpisodicPivotAnalyser** is a sophisticated machine learning-powered trading analysis platform built on **10+ years of historical market data and thousands of hours of quantitative research**, designed to identify high-probability episodic market pivots with statistical edge.
+### Core Architecture
 
-Built with .NET 10 and React, it combines **advanced quantitative models, pattern recognition algorithms, and rule-based trading logic** to analyze earnings events and market data. The system delivers real-time alerts and sell signals through multiple professional frontends, all designed with **clean architecture, shared domain logic, microservice principles, and observability-first tooling**.
+The EpisodicPivotAnalyser is a hybrid trading system that leverages both **deterministic rule-based logic** and **machine learning optimization**. The architecture separates concerns across multiple specialized applications, with the **EpisodicPivotAnalyser.Alerter** serving as the primary stock-tipping engine that continuously monitors the market and generates actionable trading signals.
 
-> This public repository documents **architecture, system design, and technical decisions**.  
-> The full implementation, proprietary machine learning models, and trading logic are maintained in **private repositories**.
+**Key Architectural Principles:**
+- **Deterministic Rule Engines**: All trading strategies are implemented as composable, testable rule sets
+- **ML-Enhanced Optimization**: Machine learning ranks rule effectiveness but doesn't replace rule logic
+- **Historical Backtesting**: All rules and strategies are validated against up to 10 years of historical data
+- **Event-Driven Communication**: Asynchronous message passing via RabbitMQ for loose coupling
+- **Real-Time Streaming**: SignalR WebSockets for sub-100ms latency updates to frontends
+
+### Data Scale & Processing
+
+The system processes substantial historical market data to ensure statistical significance and robustness:
+
+- **~10 years** of daily OHLC (Open, High, Low, Close) price data per stock
+- **100,000+** historical earnings gap-up events analyzed
+- **1,000,000+** individual price bars processed
+- **10,000,000+** rule evaluations performed during backtesting
+- **5,000,000+** ML training data points for sell rule optimization
+
+This scale ensures that backtested strategies are validated across multiple market cycles, including bull markets, bear markets, and high-volatility periods.
+
+### Architecture Diagram
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                    Frontend Applications                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐     │
+│  │   Primary    │  │ Sell Rules   │  │    Training          │     │
+│  │   Dashboard  │  │   Frontend   │  │    Dashboard         │     │
+│  │  (React 19)  │  │  (React 19)  │  │    (Next.js)         │     │
+│  └──────┬───────┘  └───────┬───────┘ └───────────┬──────────┘     │
+└─────────┼──────────────────┼─────────────────────┼────────────────┘
+          │                  │                     │
+          │                  └─────────┬───────────┘
+          │                            │ REST + SignalR (WebSockets)
+          │                            │
+┌─────────┴────────────────────────────▼────────────────────────────┐
+│                  EpisodicPivotAnalyser.StockData.Api              │
+│                     (API Gateway & Hub)                           │
+│  • REST Endpoints         • SignalR Hubs      • Request Routing   │
+└────────┬─────────────────────────────┬────────────────────────────┘
+         │                             │
+         │                             │
+    ┌────▼──────────────┐    ┌─────────▼──────────────┐
+    │                   │    │                        │
+    │  Alerter          │    │  ML.SellRuleOptimizer  │
+    │  (Stock Tipping   │    │  (ML Training &        │
+    │   Engine)         │    │   Rule Analysis)       │
+    │                   │    │                        │
+    │ • Scheduled runs  │    │ • LightGBM training    │
+    │ • Rule evaluation │    │ • Feature engineering  │
+    │ • Signal gen      │    │ • Performance ranking  │
+    └────────┬──────────┘    └─────────┬──────────────┘
+             │                         │
+             └──────────┬──────────────┘
+                        │
+              ┌─────────▼──────────┐
+              │                    │
+              │  Common Library    │
+              │                    │
+              │ • IRule interface  │
+              │ • ISellRule        │
+              │ • 16+ Buy Rules    │
+              │ • 17+ Sell Rules   │
+              │ • Strategy Pattern │
+              └─────────┬──────────┘
+                        │
+         ┌──────────────┴────────────────────┐
+         │                                   │
+    ┌────▼────────┐   ┌────────────┐   ┌────▼────────┐
+    │ SQL Server  │   │  RabbitMQ  │   │   Redis     │
+    │             │   │            │   │             │
+    │ • Alerts    │   │ • Events   │   │ • Caching   │
+    │ • Prices    │   │ • Messages │   │ • Sessions  │
+    │ • Training  │   │            │   │             │
+    └─────────────┘   └────────────┘   └─────────────┘
+```
 
 ---
 
-> ⚠️ **Public Overview Repository**  
-> This repository serves as a **public technical overview and architectural documentation** of the *EpisodicPivotAnalyser* platform.  
-> **The full source code, implementations, and proprietary logic are maintained in private repositories and are not publicly available.**
+## Deterministic Rules + Machine Learning Hybrid
 
-A sophisticated automated algorithmic trading system designed to identify and analyze stock opportunities based on the **Episodic Pivot** trading strategy. **Built on a foundation of 10+ years of historical market data and refined through thousands of hours of quantitative research**, the system automatically scans for stocks with earnings gaps, evaluates multiple technical trading rules using statistically-validated patterns, and provides professional trading dashboards with real-time alerts and comprehensive sell signal analysis.
+### The Hybrid Approach
 
-### 🎓 Research Foundation
+Unlike pure ML "black box" systems, EpisodicPivotAnalyser maintains **explainability and auditability** through a hybrid architecture:
 
-This platform represents **years of dedicated quantitative research and machine learning development**:
-- **10+ years of historical stock market data** analyzed and integrated
-- **Thousands of hours** invested in strategy development, backtesting, and validation
-- **Statistical edge discovery** through comprehensive historical analysis
-- **Machine learning models** trained on extensive historical patterns
-- **Quantitative validation** of every trading rule and signal
-- **Continuous refinement** based on real-world market performance
+**Deterministic Rule Engines (Primary Logic)**
+- All buy and sell decisions are made by explicit, testable rules
+- Each rule implements a specific trading pattern or risk management principle
+- Rules are composable via the Strategy Pattern
+- Every trade decision can be traced to specific rule violations/triggers
 
----
+**Machine Learning (Optimization Layer)**
+- ML analyzes historical outcomes to rank which rules perform best
+- Identifies optimal parameter combinations (e.g., stop-loss percentages, volume thresholds)
+- Provides data-driven insights for strategy refinement
+- Does NOT make trading decisions directly
 
-## 📋 Table of Contents
+This approach ensures:
+- **Transparency**: Every decision has a clear explanation
+- **Regulatory Compliance**: Audit trail for all signals
+- **Engineer Control**: Strategies can be refined based on domain expertise
+- **Data-Driven Insights**: ML identifies patterns humans might miss
 
-- [Project Overview](#project-overview)
-- [Research Foundation](#-research-foundation)
-- [Machine Learning & Data Science](#-machine-learning--data-science)
-- [Architecture Summary](#architecture-summary)
-- [Features](#features)
-- [Roadmap](#roadmap)
-- [Acknowledgments](#acknowledgments)
+### Backtesting Framework
 
----
+All strategies undergo rigorous historical validation:
 
-## 🎯 Project Overview
+1. **Data Collection**: 10 years of daily OHLC data + earnings announcements
+2. **Rule Simulation**: Each rule evaluated against every historical event
+3. **Performance Calculation**: Returns computed for multiple holding periods (5-180 days)
+4. **Statistical Analysis**: Win rates, Sharpe ratios, max drawdown calculated
+5. **ML Training**: LightGBM model trained on features + outcomes
+6. **Rule Ranking**: Strategies ranked by risk-adjusted returns
 
-**EpisodicPivotAnalyser** is an end-to-end automated trading analysis platform that combines **quantitative research, machine learning, data collection, algorithmic rule evaluation, and multi-frontend presentation**. It is specifically designed for traders following the **Episodic Pivot strategy** (influenced by Qullamaggie's gap-up trading methodology) and is built on a **solid foundation of statistical analysis and historical validation**.
-
-### What Problem Does It Solve?
-
-The project addresses several key challenges in algorithmic trading:
-
-1. **Data-Driven Stock Screening**: Leverages 10+ years of historical data to continuously monitor earnings calendars and identify stocks matching statistically-validated technical patterns (gap-ups, volume spikes, moving average breakouts)
-2. **Quantitative Rule-Based Analysis**: Evaluates 10+ trading rules automatically, each validated through extensive backtesting, to filter high-probability setups with proven statistical edge
-3. **Machine Learning Integration**: Applies proprietary machine learning models for earnings quality scoring and pattern recognition, trained on years of historical market behavior
-4. **Real-Time Alerts**: Sends email notifications and provides web dashboards for immediate action on opportunities identified by the ML-enhanced analysis engine
-5. **Sell Signal Detection**: Monitors positions using quantitative indicators and alerts traders when predefined exit conditions are met
-6. **Multi-Frontend Access**: Provides professional trading dashboards optimized for different workflows (alerts, sell analysis, exploratory research)
-
-### Core Trading Strategy
-
-The **Episodic Pivot** strategy focuses on:
-- Stocks gapping up on earnings announcements
-- Strong volume confirmation
-- Technical breakout patterns (moving averages, relative strength)
-- Risk-managed entries with defined stop losses
-- R-multiple based profit targets (2R, 3R, 5R)
+The backtesting engine processes millions of historical data points to ensure statistical significance across bull markets, bear markets, and sideways markets.
 
 ---
 
-## 🤖 Machine Learning & Data Science
+## Application Portfolio
 
-### Historical Data Foundation
+### EpisodicPivotAnalyser.Alerter (Primary Stock Tipping Engine)
 
-The **EpisodicPivotAnalyser** platform is built on an extensive foundation of historical market data and quantitative research:
+**Role**: The core production application that generates real-time stock trading signals.
 
-- **10+ Years of Market Data**: Complete OHLCV (Open, High, Low, Close, Volume) data spanning over a decade
-- **Thousands of Earnings Events**: Comprehensive database of earnings announcements, surprises, and subsequent price movements
-- **Millions of Data Points**: Historical technical indicators, volume patterns, and price action across thousands of stocks
-- **Backtested Validation**: Every trading rule and signal has been validated against years of historical data
+**Architecture**: Background service (.NET Hosted Service) that runs on a scheduled basis (every 10 minutes from 3:30 PM to 11:59 PM on weekdays).
 
-### Machine Learning & Quantitative Models
+**Responsibilities**:
+- Monitors earnings calendar for gap-up events (stocks opening significantly higher after earnings)
+- Evaluates each candidate against 16+ buy rules (gap size, volume, moving averages, technical indicators)
+- Generates alerts for stocks that pass all buy criteria
+- Persists alerts to database for consumption by frontends
+- Publishes events via RabbitMQ for downstream processing
 
-The system incorporates advanced machine learning and statistical analysis:
+**Key Technologies**: .NET 10, Hosted Services, Dapper ORM, MassTransit, Serilog
 
-#### 1. **Earnings Quality Scoring Model**
-- **Training Data**: 10+ years of earnings announcements and subsequent stock performance
-- **Features**: EPS surprise percentage, revenue surprise, historical earnings consistency, sector trends
-- **Output**: Proprietary earnings score and percentile ranking (0-100)
-- **Purpose**: Quantifies the quality and significance of earnings events to prioritize high-probability opportunities
-- **Validation**: Continuously validated against out-of-sample data to ensure predictive accuracy
+**Rule Examples**:
+- `GapUpRule`: Validates minimum gap percentage
+- `PricePercentChangeRule`: Checks price momentum
+- `AverageDailyRangeRule`: Ensures sufficient volatility
+- `MovingAverageCrossRule`: Confirms trend alignment
 
-#### 2. **Pattern Recognition Algorithms**
-- **Gap-Up Pattern Analysis**: Statistical models identifying successful gap-and-go patterns vs. gap-and-fail scenarios
-- **Volume Profile Analysis**: Machine learning classification of volume patterns (climax, accumulation, distribution)
-- **Moving Average Dynamics**: Quantitative analysis of moving average interactions and their predictive power
-- **Technical Breakout Detection**: Pattern recognition for identifying high-probability technical breakouts
+### EpisodicPivotAnalyser.StockData.Api (API Gateway)
 
-#### 3. **Statistical Edge Validation**
-- **Backtesting Framework**: Comprehensive testing infrastructure using historical data
-- **Performance Metrics**: Win rate, average R-multiple, expectancy, drawdown analysis
-- **Statistical Significance**: All rules tested for statistical significance (p-value < 0.05)
-- **Walk-Forward Analysis**: Continuous validation on unseen data to prevent overfitting
+**Role**: Central API gateway and SignalR hub for all frontend applications.
 
-#### 4. **Quantitative Rule Engine**
-Every trading rule in the system is:
-- **Historically Validated**: Tested against 10+ years of market data
-- **Statistically Significant**: Proven edge with measurable positive expectancy
-- **Continuously Refined**: Rules updated based on ongoing performance analysis
-- **Risk-Adjusted**: Incorporates volatility, ATR (Average True Range), and position sizing principles
+**Architecture**: ASP.NET Core Web API with minimal API endpoints and SignalR hubs.
 
-### Research Methodology
-
-The development of this platform represents **thousands of hours of dedicated research**:
-
-1. **Data Collection & Cleaning** 
-   - Aggregation of historical data from multiple sources
-   - Data quality validation and cleansing
-   - Gap adjustment and split handling
-   - Volume normalization
-
-2. **Strategy Development** 
-   - Hypothesis generation and testing
-   - Rule development and optimization
-   - Parameter tuning and sensitivity analysis
-   - Risk management integration
-
-3. **Backtesting & Validation**
-   - Historical simulation across different market conditions
-   - Walk-forward testing and cross-validation
-   - Statistical analysis of results
-   - Edge verification and robustness testing
-
-4. **Machine Learning Model Development**
-   - Feature engineering and selection
-   - Model training and hyperparameter optimization
-   - Cross-validation and out-of-sample testing
-   - Model deployment and monitoring
-
-5. **System Architecture & Engineering** 
-   - Microservices design and implementation
-   - Database optimization for time-series data
-   - Real-time data pipeline development
-   - Frontend development and UX optimization
-
-### Continuous Learning & Adaptation
-
-The system is designed for continuous improvement:
-- **Performance Monitoring**: Real-time tracking of all signals and their outcomes
-- **Model Retraining**: Periodic retraining of ML models with updated data
-- **Rule Optimization**: Ongoing refinement based on market conditions
-- **A/B Testing**: Systematic testing of rule variations
-- **Market Regime Detection**: Adaptive behavior based on current market conditions
-
-This quantitative foundation ensures that **every alert, signal, and recommendation is backed by statistical evidence** and historical validation, not subjective interpretation or guesswork.
-
----
-
-## 🏗️ Architecture Summary
-
-EpisodicPivotAnalyser follows a **hybrid microservices + shared library architecture** with clear separation of concerns, designed to support **real-time data processing, machine learning inference, and high-performance analytics**:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     FRONTENDS (User Layer)                      │
-├──────────────────┬───────────────────┬──────────────────────────┤
-│  FrontEnd        │  SellRulesFrontEnd│  Training UI (Next.js)   │
-│  (React+TS+Vite) │  (React+TS+Vite)  │  (Next.js+Tailwind)      │
-└────────┬─────────┴────────┬──────────┴───────────┬──────────────┘
-         │                  │                      │ HTTP/REST
-         └──────────────────┼──────────────────────┘
-                           │
-                ┌──────────▼──────────────┐
-                │  StockData.Api (ASP.NET)│◄─── Port 5237
-                │  ├─ /alerts             │
-                │  ├─ /earnings-whisper   │
-                │  ├─ /sell-rules         │
-                │  └─ /stock-data         │
-                └──────────┬──────────────┘
-                           │ (Repositories)
-         ┌─────────────────┼─────────────────┐
-         │                 │                 │
-    ┌────▼────────┐  ┌─────▼──────┐  ┌───────▼──────┐
-    │  Common Lib │  │  Alerter   │  │  EarningsCsv │
-    │  (Core)     │  │ (Service)  │  │  Exporter    │
-    │ ├ Rules     │  │ Runs 10min │  └──────────────┘
-    │ ├ SellRules │  │ Post-Market│
-    │ ├ Services  │  └────┬───────┘
-    │ ├ ML Models │       │
-    │ └ Analytics │       │ (MassTransit)
-    └────┬────────┘       │
-         │                │
-    ┌────▼────────────────▼──────────┐
-    │   SQL Server Database          │
-    │  ├ AlertResult (Current Data)  │
-    │  ├ EarningsWhisper (ML Input)  │
-    │  ├ EarningsScore (ML Output)   │
-    │  ├ TrainingData (10+ yrs)      │
-    │  └ Historical OHLCV (10+ yrs)  │
-    └────────────────────────────────┘
-
-         Optional Infrastructure:
-    ┌─────────────────────────────────┐
-    │  RabbitMQ (Message Bus)         │
-    │  Redis (Caching)                │
-    │  Aspire (Local Orchestration)   │
-    └─────────────────────────────────┘
-```
-
-### Data Flow & Machine Learning Integration
-
-**1. Data Ingestion Pipeline**
-```
-External APIs → Alerter Service → Data Validation → Database Storage
-    ↓                   ↓                 ↓              ↓
-Polygon API     Earnings Calendar    Rule Engine    Historical Data
-StockTwits      Price/Volume         ML Models      Training Sets
-Web Scraping    Technical Calcs      Analytics      Backtesting
-```
-
-**2. Machine Learning Inference Flow**
-```
-New Earnings Event → Feature Extraction → ML Model → Earnings Score
-       ↓                     ↓                ↓            ↓
-  EPS Surprise         Historical         Trained      Percentile
-  Revenue Data         Patterns           Model        Ranking (0-100)
-  Sector Info          Comparisons        Inference    Priority Signal
-```
-
-**3. Alert Generation Flow**
-```
-Market Data → Rule Evaluation → Score Aggregation → Alert Creation
-     ↓              ↓                   ↓                  ↓
- OHLCV Data    10+ Rules          ML Scores          Database
- Technical     Statistical        Quantitative       Email Alerts
- Indicators    Validation         Models             Dashboard
-```
-
-**4. Real-Time Analysis Flow**
-```
-User Request → API Endpoint → Data Repository → Response
-     ↓              ↓               ↓               ↓
- Ticker Query   Sell Rules     Database Query   JSON Data
- Parameters     Calculation    Cache Check      Charts/UI
- Filters        ML Inference   Historical Data  Visualization
-```
-
-### Sub-Applications & Modules
-
-#### 1. **EpisodicPivotAnalyser.Alerter** (Hosted Service)
-- **What it does**: Core alert generation engine that runs on a scheduled timer (every 10 minutes during post-market hours: 3:30 PM - 11:59 PM weekdays). This is the **heart of the machine learning inference pipeline**.
-- **Input**: Earnings calendar from Polygon API, stock OHLCV data, trading rules configuration, historical pattern database
-- **Output**: AlertResult records in database (with ML-generated earnings scores), email notifications to configured recipients
-- **How it fits**: This is the **heart of the system** - the single source of truth for trading signals. All business logic, rule evaluation, and **machine learning model inference** happen here. Every alert is enriched with quantitative scores derived from 10+ years of historical data analysis.
-- **ML Integration**: 
-  - Executes earnings quality scoring models on each event
-  - Applies pattern recognition algorithms to identify high-probability setups
-  - Uses statistical validation to filter signals
-  - Generates percentile rankings based on historical distributions
-
-**Technologies**: .NET 10, Serilog, MassTransit, Selenium WebDriver
-
-#### 2. **EpisodicPivotAnalyser.StockData.Api** (REST API)
-- **What it does**: Serves stock alerts, earnings data, and sell signals to frontend applications via REST endpoints
-- **Input**: HTTP requests from frontends (GET /alerts, GET /sell-rules/{ticker}, POST /buy-stock, etc.)
-- **Output**: JSON responses with alerts, earnings whisper data, sell rule evaluations, historical stock data
-- **How it fits**: Acts as the **data gateway** between the backend services/database and frontend UIs. Includes mock data fallback for development.
-
-**Technologies**: ASP.NET Core 10, Swagger/OpenAPI, Skender.Stock.Indicators
+**Responsibilities**:
+- REST endpoints for alert history, stock data, ML training, rule combinations
+- SignalR hubs for real-time alert broadcasting and ML training progress
+- Request routing to backend services (Alerter, ML Optimizer)
+- CORS configuration for multiple frontend origins
 
 **Key Endpoints**:
-```
-GET  /alerts                           → List all stock alerts
-GET  /earnings-whisper/{ticker}        → Earnings surprise data
-GET  /earnings-candidates/{ticker}     → Earnings score/percentile
-POST /buy-stock                        → Mark alert as buy (user action)
-POST /ignore-stock                     → Mark alert as ignore (user action)
-GET  /api/sell-rules/{ticker}          → Evaluate all sell rules for a ticker
-GET  /api/sell-signals                 → Recent sell signals across all stocks
-GET  /api/stock-data/historical        → Historical OHLCV data
-```
+- `/api/v1/alerts` - Alert history and search
+- `/api/v1/ml/sell-rule-optimizer` - ML training and rule rankings
+- `/api/v1/rule-combinations` - Backtest rule combinations
+- `/api/v1/stocks` - Stock price and technical data
+- `/hubs/training-progress` - Real-time ML training updates (SignalR)
 
-#### 3. **EpisodicPivotAnalyser.Common** (Shared Library)
-- **What it does**: Core domain models, repositories, services, and business logic. **Single source of truth** for all rule evaluations and **machine learning model implementations**.
-- **Input**: Stock data from APIs (Polygon, Stocktwits), database connections, historical training data
-- **Output**: Validated stock data, rule evaluation results, sell signal assessments, **ML model predictions and scores**
-- **How it fits**: Shared by all backend components (Alerter, API, ConsoleApp). Contains no UI code, only pure business logic, **quantitative models, and ML inference engines**.
+**Key Technologies**: ASP.NET Core 10, SignalR, Swagger/OpenAPI, MassTransit
 
-**Key Components**:
-- **Rules**: 10+ trading rules (GapUpRule, EpisodicPivotRules, VolumeRule, MovingAverageRule, etc.) - all **statistically validated against historical data**
-- **SellRules**: 7 sell signal detectors (Moving Average Crossover, Climax Volume, Failure to Hold Gap, Reversal Patterns, Profit Targets) - **backtested on 10+ years of data**
-- **ML Models**: Earnings quality scoring, pattern recognition, statistical validation engines
-- **Services**: EarningsService, StockDataService, RuleService, EarningsWhisperService (web scraping), MessageService, **QuantitativeAnalysisService**
-- **Repositories**: AlertResultRepository, EarningsWhisperRepository, EarningsScoreRepository, FundamentalDataRepository, **HistoricalDataRepository (10+ years)**
+### EpisodicPivotAnalyser.ML.SellRuleOptimizer
 
-**Technologies**: .NET 10, Dapper ORM, Selenium WebDriver 4.40, System.Data.SqlClient
+**Role**: Machine learning service for optimizing sell rule effectiveness.
 
-#### 4. **EpisodicPivotAnalyser.FrontEnd** (React SPA)
-- **What it does**: Professional dark-mode trading dashboard for viewing real-time alerts and taking buy/ignore actions
-- **Input**: User interactions (clicks, tab navigation), API responses from StockData.Api
-- **Output**: Rendered HTML/CSS/JS dashboard, HTTP POST requests for user actions (buy/ignore)
-- **How it fits**: Primary user interface for traders to **view and act on alerts**. Auto-refreshes every 20 seconds.
+**Architecture**: ML.NET library with LightGBM regression models.
 
-**Technologies**: React 18, TypeScript, Vite, Material UI v6, Axios
+**Responsibilities**:
+- Loads historical earnings gap-up data from JSON files
+- Extracts 30+ features per event (gap size, volume ratio, ATR, MA distance, etc.)
+- Evaluates all 17+ sell rules against historical outcomes
+- Trains LightGBM models to predict returns based on features
+- Ranks rules by average return, median return, win rate, Sharpe ratio
+- Compares time-based exits (5, 10, 15... 180 days) vs rule-based exits
+
+**ML Pipeline**:
+1. **Data Preparation** (parallel processing): Feature engineering for ~100k+ events
+2. **Training** (LightGBM): Gradient boosting with 100 iterations
+3. **Evaluation**: Test set performance metrics (R², RMSE, MAE)
+4. **Ranking**: Sort rules by risk-adjusted performance
+
+**Key Technologies**: ML.NET 4.0, LightGBM, Parallel Processing, IProgress<T> for real-time updates
+
+**Performance Metrics**:
+- Training time: ~30-50 seconds (down from 90-120s via parallelization)
+- Feature engineering: 3-4x speedup using all CPU cores
+- Real-time progress updates via SignalR (phase, percentage, ETA)
+
+### EpisodicPivotAnalyser.SellRulesFrontEnd (Sell Rules Analysis & ML Optimizer)
+
+**Role**: Interactive web application for analyzing sell rules and ML optimization results.
+
+**Architecture**: React 19 + TypeScript SPA with Material-UI components and Lightweight Charts.
+
+**Three Primary Views**:
+
+#### 1. Sell Rules Analysis
+Visual analysis of historical earnings gap-up events and their outcomes.
+
+![Sell Rules Analysis](src/EpisodicPivotAnalyser.SellRulesFrontEnd/screenshots/sell-rules-analysis.png)
 
 **Features**:
-- Dark theme inspired by TradingView/Bloomberg Terminal
-- Tab navigation: All Alerts, Buy List, Ignore List
-- Stock detail modal with comprehensive earnings data
-- Auto-refresh functionality
-- Loading states and skeleton screens
+- List of historical gap-up events with stock cards
+- Price charts showing entry points and sell signals
+- Performance metrics: realized returns, holding days, rule violations
+- Filter by symbol, date range, rule violations
 
-#### 5. **EpisodicPivotAnalyser.SellRulesFrontEnd** (React SPA)
-- **What it does**: Stock analysis dashboard with interactive charting and sell rules visualization
-- **Input**: Ticker symbol input, API /sell-rules endpoint, historical stock data
-- **Output**: Interactive candlestick charts, sell rule trigger indicators, visual annotations on charts
-- **How it fits**: Focused on **position management** - helps traders monitor exit conditions for existing positions.
+#### 2. ML Optimizer
+Machine learning training interface with real-time progress tracking.
 
-**Technologies**: React 19, TypeScript, Vite, Material UI, Lightweight Charts (TradingView library)
+![ML Optimizer](src/EpisodicPivotAnalyser.SellRulesFrontEnd/screenshots/ml-optimizer.png)
 
 **Features**:
-- High-performance candlestick charting
-- Visual sell signal indicators on charts
-- Rule-by-rule breakdown with severity levels
-- Support for multiple timeframes
+- "Train Model" button to initiate ML training
+- **Real-time progress dialog** with:
+  - Current phase indicator (Data Loading → Feature Engineering → Training → Evaluation → Ranking)
+  - Linear progress bar with percentage
+  - Estimated time remaining (ETA)
+  - Step counters (e.g., "453 of 1,000 gaps processed")
+  - Warning/error display
+- **Results display**:
+  - Model performance metrics (R², RMSE, MAE)
+  - Rule rankings table sorted by predicted return
+  - Performance comparison: time-based vs rule-based exits
+  - Win rate percentages and risk metrics
 
-#### 6. **EpisodicPivotAnalyser.Gui** (Next.js App)
-- **What it does**: Exploratory GUI with lighter implementation for research and experimentation
-- **Input**: User navigation, API calls
-- **Output**: Rendered Next.js pages with stock data
-- **How it fits**: Alternative frontend for **exploratory analysis** and rapid prototyping.
+The progress dialog provides complete visibility into the ML training process, updating every 0.5-1 seconds via SignalR WebSocket connection.
 
-**Technologies**: Next.js, TypeScript, Tailwind CSS
+#### 3. Rule Combinations
+Interactive tool for testing combinations of sell rules and analyzing synergistic effects.
 
-#### 7. **EpisodicPivotAnalyser.ConsoleApp** (Console Application)
-- **What it does**: Statistics collection and batch analysis tool for **backtesting, research, and ML model validation**
-- **Input**: Historical stock data (10+ years), command-line arguments, backtesting parameters
-- **Output**: Console output with statistics, analysis results, **model performance metrics, backtest reports**
-- **How it fits**: Used for **backtesting** trading strategies, generating performance reports, **training and validating ML models**, and conducting quantitative research on historical data.
+![Rule Combinations](src/EpisodicPivotAnalyser.SellRulesFrontEnd/screenshots/rule-combinations.png)
 
-**Technologies**: .NET 10, Serilog
+**Features**:
+- **Rule Selection Interface**: 
+  - Checkboxes for 16+ available rules
+  - Stop Loss Rule (4%) automatically included
+  - Create multiple test combinations
+- **Performance Metrics**:
+  - Average return, median return, win rate
+  - Sharpe ratio, standard deviation, max drawdown
+  - Max/min returns, total trades
+  - Average holding days
+  - Stop loss trigger count and percentage
+- **Visual Summary Cards**: Highlight best performers
+- **CSV Export**: Download results for further analysis
+- **Insights Engine**: AI-generated insights on rule effectiveness and synergies
 
-#### 8. **EpisodicPivotAnalyser.Migrations** (Database Migration Tool)
-- **What it does**: Manages SQL Server database schema using Grate migration framework
-- **Input**: SQL migration scripts in `/Grate` folder
-- **Output**: Applied database schema (tables, indexes, stored procedures)
-- **How it fits**: Ensures **database schema consistency** across environments (dev, staging, production).
+**Key Technologies**: React 19, TypeScript 5.7, Vite, Material-UI v6, Lightweight Charts, SignalR Client, Axios
 
-**Technologies**: Grate, SQL Server, PowerShell
+### EpisodicPivotAnalyser.FrontEnd (Primary Dashboard)
 
-#### 9. **EpisodicPivotAnalyser.MassTransit** (Message Bus Library)
-- **What it does**: RabbitMQ messaging configuration, health checks, and OpenTelemetry integration
-- **Input**: Configuration from appsettings.json
-- **Output**: Configured MassTransit bus, telemetry data
-- **How it fits**: Enables **asynchronous messaging** between services for scalability (optional).
+**Role**: Main monitoring dashboard for viewing real-time alerts and system status.
 
-**Technologies**: MassTransit, RabbitMQ, OpenTelemetry
+**Architecture**: React 19 + TypeScript SPA with Material-UI.
 
-#### 10. **EpisodicPivotAnalyser.Aspire** (.NET Aspire Orchestration)
-- **What it does**: Local development orchestration using .NET Aspire
-- **Input**: Service definitions, Docker Compose configurations
-- **Output**: Running local environment with Alerter, RabbitMQ, Redis, SQL Server
-- **How it fits**: Provides a **one-command local development environment** with full observability.
+**Features**:
+- Real-time alert streaming via SignalR (sub-100ms latency)
+- Alert list with sorting, filtering, pagination
+- Stock cards with technical indicators
+- Quick search by symbol
+- Market status indicators
 
-**Technologies**: .NET 10 Aspire, Docker, OpenTelemetry
+**Key Technologies**: React 19, TypeScript, Material-UI, SignalR, Axios
 
-#### 11. **EpisodicPivotAnalyser.EarningsCsvExporter** (Console Application)
-- **What it does**: Exports earnings data from database to CSV files for external analysis
-- **Input**: Database connection, output directory
-- **Output**: CSV files with earnings data
-- **How it fits**: Utility for **data export and backup**.
+### EpisodicPivotAnalyser.TrainingDashboard
 
-**Technologies**: .NET 10
+**Role**: Manual annotation tool for creating ML training datasets.
 
-#### 12. **EpisodicPivotAnalyzer.Logging** (Shared Library)
-- **What it does**: Logging enrichment, sanitization, and utility functions
-- **Input**: Log events from services
-- **Output**: Enriched, structured log entries (console, file, Elasticsearch)
-- **How it fits**: Provides **centralized logging infrastructure** across all backend services.
+**Architecture**: Next.js application with server-side rendering.
 
-**Technologies**: Serilog, Serilog.Sinks.Elasticsearch
+**Features**:
+- Side-by-side chart comparison for buy candidates
+- Manual "Buy" / "Ignore" tagging interface
+- Exports tagged data to JSON for ML training
+- Enables human-in-the-loop dataset curation
 
-#### 13. **Test Projects** (xUnit/NUnit)
-- **EpisodicPivotAnalyser.Alerter.Tests**: Unit tests for Alerter service
-- **EpisodicPivotAnalyser.Common.Tests**: Unit tests for Common library (rules, services)
-- **Integration.Tests**: Integration tests for end-to-end scenarios
+**Key Technologies**: Next.js, React, TypeScript, Chart.js
 
-**Technologies**: xUnit, NUnit, Moq, FluentAssertions
+### EpisodicPivotAnalyser.Common (Shared Domain Library)
 
----
+**Role**: Core business logic shared across all applications.
 
-## ✨ Features
+**Architecture**: Class library with zero framework dependencies (pure domain logic).
 
-### Machine Learning & Quantitative Analysis
-- ✅ **10+ Years Historical Database**: Complete market data repository with OHLCV, earnings, and technical indicators
-- ✅ **Earnings Quality ML Model**: Proprietary machine learning model scoring earnings events based on historical performance patterns
-- ✅ **Pattern Recognition Engine**: Statistical algorithms identifying gap-and-go patterns vs. gap-and-fail scenarios
-- ✅ **Quantitative Backtesting**: Comprehensive framework for validating strategies on historical data
-- ✅ **Statistical Edge Validation**: Every rule tested for statistical significance (p < 0.05) and positive expectancy
-- ✅ **Performance Analytics**: Real-time tracking and analysis of signal outcomes and model accuracy
+**Contains**:
+- `IRule` and `ISellRule` interfaces
+- 16+ buy rule implementations (e.g., `GapUpRule`, `MovingAverageCrossRule`)
+- 17+ sell rule implementations (e.g., `StopLossRule`, `TrailingStopRule`, `ProfitTargetRule`)
+- `IStockPickingStrategy` for rule composition
+- Domain models (Stock, Alert, PriceBar, etc.)
+- Service interfaces (repository abstractions)
+- Technical indicator utilities (leveraging Skender.Stock.Indicators)
 
-### Trading Analysis
-- ✅ **Automated Earnings Gap Scanner**: Monitors earnings calendars and identifies gap-up opportunities using ML-enhanced filtering
-- ✅ **10+ Technical Trading Rules**: Comprehensive rule engine (volume, moving averages, ADR, relative strength, low price filter) - **all statistically validated**
-- ✅ **Earnings Surprise Data**: Web scraping of EPS and revenue surprises from earnings whisper sources
-- ✅ **Machine Learning Scoring**: Proprietary earnings quality score and percentile ranking (0-100)
-- ✅ **Real-Time Alerts**: Email notifications with full stock analysis and quantitative scores
-- ✅ **Scheduled Execution**: Runs every 10 minutes during post-market hours (3:30 PM - 11:59 PM weekdays)
+**Design Patterns**: Strategy Pattern, Repository Pattern, Dependency Inversion
 
-### Sell Signal Detection
-- ✅ **7 Comprehensive Sell Rules** (all backtested on historical data):
-  - Failure to Hold Gap-Up Low (momentum breakdown)
-  - Moving Average Crossover (10, 20, 50-day)
-  - Climax Volume Detection (exhaustion patterns)
-  - Momentum Stall (price compression)
-  - R-Multiple Profit Targets (2R, 3R, 5R) - statistically optimal exit levels
-  - Bearish Reversal Patterns (Shooting Star, Engulfing, Dark Cloud)
-  - Stop Loss Trigger (violation of defined risk levels)
+### EpisodicPivotAnalyser.Aspire (Orchestration)
 
-### User Interfaces
-- ✅ **Professional Dark-Mode Trading Dashboard**: TradingView-inspired UI with auto-refresh
-- ✅ **Interactive Sell Rules Dashboard**: Candlestick charts with visual sell signal indicators
-- ✅ **Tab Navigation**: Organized views (All Alerts, Buy List, Ignore List)
-- ✅ **Stock Detail Modal**: Comprehensive earnings data, revenue trends, EPS history
-- ✅ **Buy/Ignore Actions**: One-click stock list management
-- ✅ **Responsive Design**: Works on desktop, tablet, and mobile
+**Role**: .NET Aspire orchestration host for local development.
 
-### Developer Features
-- ✅ **Mock Data Mode**: Full functionality without database for demos/development
-- ✅ **Aspire Orchestration**: One-command local environment setup
-- ✅ **OpenTelemetry Integration**: Distributed tracing and observability
-- ✅ **Swagger API Documentation**: Interactive API explorer at `/swagger`
-- ✅ **Comprehensive Logging**: Structured logging with Serilog
-- ✅ **Azure Pipelines CI/CD**: Automated build and deployment
+**Architecture**: .NET Aspire AppHost project.
 
-### Unique Innovations
-- ✅ **Multi-Frontend Strategy**: Different UIs optimized for different workflows
-- ✅ **Single Source of Truth Architecture**: All business logic and ML models in Common library
-- ✅ **Selenium Web Scraping**: Real-time earnings surprise data collection
-- ✅ **R-Multiple Risk Management**: Calculates profit targets as multiples of risk unit
-- ✅ **Market Hours Awareness**: Smart scheduling that respects market hours
-- ✅ **Quantitative Foundation**: Every signal backed by 10+ years of statistical validation
-- ✅ **Continuous Learning**: System designed for ongoing model retraining and optimization
-- ✅ **Historical Data Repository**: Complete 10+ year database for backtesting and research
+**Responsibilities**:
+- Starts all services with a single `dotnet run` command
+- Manages dependencies (SQL Server, Redis, RabbitMQ containers)
+- Configures service discovery and environment variables
+- Provides unified observability dashboard (OpenTelemetry)
+- Aggregates logs from all services (Serilog integration)
 
----
+**Command-Line Options**:
+- `--all`: Start entire stack (API + 3 frontends + Alerter + infrastructure)
+- `--stockdata`: API only
+- `--frontends`: All 3 frontends only
+- `--alerter`: Alerter with dependencies
+- `--verbose`: Enable debug logging
 
-## 🎯 Roadmap
+### Supporting Projects
 
-Future enhancements under consideration:
+**EpisodicPivotAnalyser.MassTransit**
+- RabbitMQ integration via MassTransit
+- Event consumers and publishers
+- Message contract definitions
 
-### Machine Learning & AI
-- [ ] Implement deep learning models (LSTM/Transformer) for price prediction
-- [ ] Add reinforcement learning for dynamic position sizing
-- [ ] Develop ensemble models combining multiple ML approaches
-- [ ] Create automated feature engineering pipeline
-- [ ] Add neural network-based pattern recognition
+**EpisodicPivotAnalyser.Migrations**
+- Database migration scripts (SQL Server)
+- Schema versioning with Fluent Migrator
 
-### Quantitative Analysis
-- [ ] Expand backtesting framework with walk-forward optimization
-- [ ] Add Monte Carlo simulation for risk analysis
-- [ ] Implement factor analysis and multi-factor models
-- [ ] Create correlation analysis tools for portfolio construction
-- [ ] Add sentiment analysis integration (news, social media)
+**EpisodicPivotAnalyser.EarningsCsvExporter**
+- Utility for exporting earnings data to CSV
+- Used for external analysis and reporting
 
-### Trading & Risk Management
-- [ ] Add advanced position sizing calculator based on Kelly Criterion
-- [ ] Implement portfolio-level risk management
-- [ ] Add integration with brokerage APIs for automated trading
-- [ ] Create dynamic stop-loss adjustment based on volatility
-- [ ] Add portfolio tracking and performance analytics
+**EpisodicPivotAnalyser.ConsoleApp**
+- CLI tools for testing and data operations
+- Contains historical JSON training data
 
-### Platform Enhancements
-- [ ] Add real-time WebSocket updates instead of polling
-- [ ] Implement user authentication and multi-user support
-- [ ] Create mobile app (React Native)
-- [ ] Add advanced visualization tools (heat maps, correlation matrices)
-- [ ] Implement distributed computing for faster backtesting
+**Integration.Tests / EpisodicPivotAnalyser.Common.Tests / EpisodicPivotAnalyser.Alerter.Tests**
+- Comprehensive test suites (>80% coverage on core logic)
+- Unit tests for individual rules
+- Integration tests for API contracts (OpenAPI validation)
+- End-to-end tests for rule engine workflows
 
 ---
 
-## 🏆 Acknowledgments
+## Technology Stack
 
-### Research & Development
+### Backend (.NET)
+- **.NET 10**: Modern cross-platform runtime with C# 13
+- **ASP.NET Core**: Minimal APIs with endpoint routing
+- **SignalR**: Real-time WebSocket communication
+- **MassTransit**: Message bus abstraction over RabbitMQ
+- **Dapper**: High-performance micro-ORM for SQL Server
+- **ML.NET 4.0**: Cross-platform machine learning framework
+- **LightGBM**: Fast gradient boosting for structured data
+- **Serilog**: Structured logging with enrichers and sinks
 
-This platform represents a **significant investment in quantitative research and software engineering**:
-- **10+ years** of historical market data collected, cleaned, and validated
-- **4000+ hours** of dedicated development and research time
-- **Thousands of backtests** conducted to validate strategies
-- **Continuous refinement** based on real-world performance
+### Frontend (JavaScript/TypeScript)
+- **React 18/19**: Modern hooks-based UI framework
+- **TypeScript 5.7**: Type-safe JavaScript with strict mode
+- **Next.js**: React framework with SSR for TrainingDashboard
+- **Vite**: Fast HMR and optimized production builds
+- **Material-UI v6**: Professional component library
+- **Lightweight Charts**: High-performance financial charting
+- **SignalR Client**: WebSocket client library
+- **Axios**: HTTP client for REST APIs
 
-The system embodies a deep commitment to **data-driven trading**, where every decision is backed by statistical evidence and historical validation rather than subjective interpretation.
+### Infrastructure & Data
+- **SQL Server**: Relational database for alerts, prices, training data
+- **Redis**: In-memory cache for frequently accessed reference data
+- **RabbitMQ**: Message broker for async event distribution
+- **.NET Aspire**: Local orchestration with Docker Compose-like experience
+- **Polygon.io API**: Market data feed (OHLC, earnings, fundamentals)
+- **Skender.Stock.Indicators**: 50+ technical analysis indicators
 
-### Inspirations
+### DevOps & Observability
+- **OpenTelemetry**: Distributed tracing and metrics collection
+- **Serilog**: Structured logging with correlation IDs
+- **Azure Pipelines**: CI/CD automation (azure-pipelines.yml)
+- **.NET Aspire Dashboard**: Real-time service health monitoring
 
-This project is inspired by:
-- **Qullamaggie (Kristjan Kullamägi)**: For the Episodic Pivot strategy and gap-up trading methodology
-- **Mark Minervini**: For SEPA (Specific Entry Point Analysis) concepts
-- **William O'Neil**: For CAN SLIM principles
+---
 
-Built with ❤️ by traders and data scientists, for traders.
+## Key Architectural Patterns
+
+- **Strategy Pattern**: Composable rule engines via `IRule` and `IStockPickingStrategy`
+- **Repository Pattern**: Data access abstraction with interface-based contracts
+- **Dependency Injection**: Constructor injection throughout (avoiding service locator anti-pattern)
+- **CQRS-lite**: Separate read models (dashboards) from write models (Alerter state)
+- **Event-Driven Architecture**: Async messaging via MassTransit for loose coupling
+- **Ports and Adapters (Hexagonal)**: Domain logic in Common library, isolated from frameworks
+- **Parallel Processing**: Multi-core CPU utilization for data-intensive operations
+- **Progress Reporting**: IProgress<T> pattern for long-running operations with real-time UI updates
+
+---
+
+## Documentation
+
+Project-specific documentation:
+- [ML Optimizer Details](src/EpisodicPivotAnalyser.ML.SellRuleOptimizer/README.md)
+- [Primary Dashboard](src/EpisodicPivotAnalyser.FrontEnd/README.md)
+- [Sell Rules Frontend](src/EpisodicPivotAnalyser.SellRulesFrontEnd/README.md)
+- [Training Dashboard](src/EpisodicPivotAnalyser.TrainingDashboard/README.md)
+- [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
+- [Training Improvements](TRAINING_IMPROVEMENTS.md)
+- [HTML Files Explanation](HTML_FILES_EXPLANATION.md)
+
+---
+
+**Inspired by**: Qullamaggie (Episodic Pivot), Mark Minervini (SEPA), William O'Neil (CAN SLIM)
+
