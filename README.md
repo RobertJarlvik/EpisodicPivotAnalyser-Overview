@@ -7,6 +7,8 @@
 
 ![My GitHub Game](game.gif)
 
+> **Note**: This is a public overview of the private EpisodicPivotAnalyser codebase. The full source code and implementation details are maintained in a private repository.
+
 A production-grade algorithmic trading system that combines deterministic rule engines with machine learning to identify and evaluate stock trading opportunities. The system analyzes earnings gap-up events using 16+ buy rules and 17+ sell rules, all backtested against up to 10 years of historical market data.
 
 ---
@@ -24,17 +26,15 @@ The EpisodicPivotAnalyser is a hybrid trading system that leverages both **deter
 - **Event-Driven Communication**: Asynchronous message passing via RabbitMQ for loose coupling
 - **Real-Time Streaming**: SignalR WebSockets for sub-100ms latency updates to frontends
 
-### Data Scale & Processing
+### Data Scale
 
-The system processes substantial historical market data to ensure statistical significance and robustness:
-
-- **~10 years** of daily OHLC (Open, High, Low, Close) price data per stock
+- **~10 years** of daily OHLC price data per stock
 - **100,000+** historical earnings gap-up events analyzed
-- **800,000,000+** individual price bars processed
-- **100,000,000+** rule evaluations performed during backtesting
-- **5,000,000+** ML training data points for sell rule optimization
+- **800M+** individual price bars processed
+- **100M+** rule evaluations during backtesting
+- **5M+** ML training data points
 
-This scale ensures that backtested strategies are validated across multiple market cycles, including bull markets, bear markets, and high-volatility periods.
+Backtested across multiple market cycles to ensure robustness.
 
 ### Architecture Diagram
 
@@ -95,326 +95,155 @@ This scale ensures that backtested strategies are validated across multiple mark
 
 ---
 
-## Deterministic Rules + Machine Learning Hybrid
+## Deterministic Rules + Machine Learning
 
-### The Hybrid Approach
+The system maintains **explainability and auditability** through a hybrid architecture:
 
-Unlike pure ML "black box" systems, EpisodicPivotAnalyser maintains **explainability and auditability** through a hybrid architecture:
+**Deterministic Rule Engines** (Primary Logic)
+- All buy/sell decisions made by explicit, testable rules
+- Each rule implements specific trading patterns or risk management principles
+- Composable via Strategy Pattern with full audit trail
 
-**Deterministic Rule Engines (Primary Logic)**
-- All buy and sell decisions are made by explicit, testable rules
-- Each rule implements a specific trading pattern or risk management principle
-- Rules are composable via the Strategy Pattern
-- Every trade decision can be traced to specific rule violations/triggers
+**Machine Learning** (Optimization Layer)
+- Analyzes historical outcomes to rank rule performance
+- Identifies optimal parameter combinations (stop-loss %, volume thresholds, etc.)
+- Provides data-driven insights without making direct trading decisions
 
-**Machine Learning (Optimization Layer)**
-- ML analyzes historical outcomes to rank which rules perform best
-- Identifies optimal parameter combinations (e.g., stop-loss percentages, volume thresholds)
-- Provides data-driven insights for strategy refinement
-- Does NOT make trading decisions directly
+**Benefits**: Transparency, regulatory compliance, engineer control, and data-driven insights.
 
-This approach ensures:
-- **Transparency**: Every decision has a clear explanation
-- **Regulatory Compliance**: Audit trail for all signals
-- **Engineer Control**: Strategies can be refined based on domain expertise
-- **Data-Driven Insights**: ML identifies patterns humans might miss
-
-### Backtesting Framework
+### Backtesting
 
 All strategies undergo rigorous historical validation:
-
-1. **Data Collection**: 10 years of daily OHLC data + earnings announcements
+1. **Data Collection**: 10 years of OHLC data + earnings announcements
 2. **Rule Simulation**: Each rule evaluated against every historical event
-3. **Performance Calculation**: Returns computed for multiple holding periods (5-180 days)
-4. **Statistical Analysis**: Win rates, Sharpe ratios, max drawdown calculated
-5. **ML Training**: LightGBM model trained on features + outcomes
-6. **Rule Ranking**: Strategies ranked by risk-adjusted returns
-
-The backtesting engine processes millions of historical data points to ensure statistical significance across bull markets, bear markets, and sideways markets.
+3. **Performance Metrics**: Returns, win rates, Sharpe ratios, max drawdown
+4. **ML Training**: LightGBM model trained on features + outcomes
+5. **Rule Ranking**: Strategies ranked by risk-adjusted returns
 
 ---
 
 ## Application Portfolio
 
-### EpisodicPivotAnalyser.Alerter (Primary Stock Tipping Engine)
+### EpisodicPivotAnalyser.Alerter (Stock Tipping Engine)
 
-**Role**: The core production application that generates real-time stock trading signals.
+The core production application that generates real-time stock trading signals. Runs as a .NET Hosted Service every 10 minutes (3:30 PM - 11:59 PM weekdays).
 
-**Architecture**: Background service (.NET Hosted Service) that runs on a scheduled basis (every 10 minutes from 3:30 PM to 11:59 PM on weekdays).
-
-**Responsibilities**:
-- Monitors earnings calendar for gap-up events (stocks opening significantly higher after earnings)
-- Evaluates each candidate against 16+ buy rules (gap size, volume, moving averages, technical indicators)
-- Generates alerts for stocks that pass all buy criteria
-- Persists alerts to database for consumption by frontends
+**Key Features**:
+- Monitors earnings calendar for gap-up events
+- Evaluates candidates against 16+ buy rules (gap size, volume, moving averages, etc.)
+- Generates alerts for stocks passing all criteria
 - Publishes events via RabbitMQ for downstream processing
 
-**Key Technologies**: .NET 10, Hosted Services, Dapper ORM, MassTransit, Serilog
-
-**Rule Examples**:
-- `GapUpRule`: Validates minimum gap percentage
-- `PricePercentChangeRule`: Checks price momentum
-- `AverageDailyRangeRule`: Ensures sufficient volatility
-- `MovingAverageCrossRule`: Confirms trend alignment
+**Technologies**: .NET 10, Dapper, MassTransit, Serilog
 
 ### EpisodicPivotAnalyser.StockData.Api (API Gateway)
 
-**Role**: Central API gateway and SignalR hub for all frontend applications.
+Central API gateway and SignalR hub for all frontend applications. Built with ASP.NET Core Minimal APIs.
 
-**Architecture**: ASP.NET Core Web API with minimal API endpoints and SignalR hubs.
-
-**Responsibilities**:
-- REST endpoints for alert history, stock data, ML training, rule combinations
-- SignalR hubs for real-time alert broadcasting and ML training progress
-- Request routing to backend services (Alerter, ML Optimizer)
+**Key Features**:
+- REST endpoints: alerts, stock data, ML training, rule combinations
+- SignalR hubs for real-time updates (sub-100ms latency)
 - CORS configuration for multiple frontend origins
 
-**Key Endpoints**:
-- `/api/v1/alerts` - Alert history and search
-- `/api/v1/ml/sell-rule-optimizer` - ML training and rule rankings
-- `/api/v1/rule-combinations` - Backtest rule combinations
-- `/api/v1/stocks` - Stock price and technical data
-- `/hubs/training-progress` - Real-time ML training updates (SignalR)
-
-**Key Technologies**: ASP.NET Core 10, SignalR, Swagger/OpenAPI, MassTransit
+**Technologies**: ASP.NET Core 10, SignalR, Swagger/OpenAPI, MassTransit
 
 ### EpisodicPivotAnalyser.ML.SellRuleOptimizer
 
-**Role**: Machine learning service for optimizing sell rule effectiveness.
+Machine learning service for optimizing sell rule effectiveness using ML.NET and LightGBM.
 
-**Architecture**: ML.NET library with LightGBM regression models.
-
-**Responsibilities**:
-- Loads historical earnings gap-up data from JSON files
-- Extracts 30+ features per event (gap size, volume ratio, ATR, MA distance, etc.)
+**Key Features**:
+- Extracts 30+ features per earnings event (gap size, volume, ATR, MA distance, etc.)
 - Evaluates all 17+ sell rules against historical outcomes
-- Trains LightGBM models to predict returns based on features
+- Trains LightGBM models to predict returns
 - Ranks rules by average return, median return, win rate, Sharpe ratio
-- Compares time-based exits (5, 10, 15... 180 days) vs rule-based exits
+- Compares time-based exits (5-180 days) vs rule-based exits
 
-**ML Pipeline**:
-1. **Data Preparation** (parallel processing): Feature engineering for ~100k+ events
-2. **Training** (LightGBM): Gradient boosting with 100 iterations
-3. **Evaluation**: Test set performance metrics (R², RMSE, MAE)
-4. **Ranking**: Sort rules by risk-adjusted performance
+**Performance**: Training time ~30-50 seconds (3-4x speedup via parallelization), real-time progress updates via SignalR
 
-**Key Technologies**: ML.NET 4.0, LightGBM, Parallel Processing, IProgress<T> for real-time updates
+**Technologies**: ML.NET 4.0, LightGBM, Parallel Processing
 
-**Performance Metrics**:
-- Training time: ~30-50 seconds (down from 90-120s via parallelization)
-- Feature engineering: 3-4x speedup using all CPU cores
-- Real-time progress updates via SignalR (phase, percentage, ETA)
+### EpisodicPivotAnalyser.SellRulesFrontEnd
 
-### EpisodicPivotAnalyser.SellRulesFrontEnd (Sell Rules Analysis & ML Optimizer)
+Interactive React 19 web application for analyzing sell rules and ML optimization results.
 
-**Role**: Interactive web application for analyzing sell rules and ML optimization results.
-
-**Architecture**: React 19 + TypeScript SPA with Material-UI components and Lightweight Charts.
-
-**Three Primary Views**:
+**Four Primary Views**:
 
 #### 1. Sell Rules Analysis
-Visual analysis of historical earnings gap-up events and their outcomes.
+Visual analysis of historical earnings gap-up events with price charts, performance metrics, and filtering capabilities.
 
 <img width="1445" height="1331" alt="image" src="https://github.com/user-attachments/assets/34b9f733-9ea2-4bcd-a379-ae02c193940d" />
 
-**Features**:
-- List of historical gap-up events with stock cards
-- Price charts showing entry points and sell signals
-- Performance metrics: realized returns, holding days, rule violations
-- Filter by symbol, date range, rule violations
-
 #### 2. ML Optimizer
-Machine learning training interface with real-time progress tracking.
+ML training interface with real-time progress tracking (phases, percentage, ETA) and results display (model metrics, rule rankings, performance comparisons).
 
 <img width="1456" height="1148" alt="image" src="https://github.com/user-attachments/assets/5320785b-9ff6-49de-b004-4733c79fa200" />
 
-**Features**:
-- "Train Model" button to initiate ML training
-- **Real-time progress dialog** with:
-  - Current phase indicator (Data Loading → Feature Engineering → Training → Evaluation → Ranking)
-  - Linear progress bar with percentage
-  - Estimated time remaining (ETA)
-  - Step counters (e.g., "453 of 1,000 gaps processed")
-  - Warning/error display
-- **Results display**:
-  - Model performance metrics (R², RMSE, MAE)
-  - Rule rankings table sorted by predicted return
-  - Performance comparison: time-based vs rule-based exits
-  - Win rate percentages and risk metrics
-
-The progress dialog provides complete visibility into the ML training process, updating every 0.5-1 seconds via SignalR WebSocket connection.
-
 #### 3. Rule Combinations
-Interactive tool for testing combinations of sell rules and analyzing synergistic effects.
+Test combinations of sell rules with performance metrics (returns, win rates, Sharpe ratios), visual summary cards, CSV export, and AI-generated insights.
 
 <img width="1460" height="954" alt="image" src="https://github.com/user-attachments/assets/79ac5986-11f2-437a-8e6d-4fe2b87c0841" />
 
-**Features**:
-- **Rule Selection Interface**: 
-  - Checkboxes for 16+ available rules
-  - Stop Loss Rule (4%) automatically included
-  - Create multiple test combinations
-- **Performance Metrics**:
-  - Average return, median return, win rate
-  - Sharpe ratio, standard deviation, max drawdown
-  - Max/min returns, total trades
-  - Average holding days
-  - Stop loss trigger count and percentage
-- **Visual Summary Cards**: Highlight best performers
-- **CSV Export**: Download results for further analysis
-- **Insights Engine**: AI-generated insights on rule effectiveness and synergies
-
-**Key Technologies**: React 19, TypeScript 5.7, Vite, Material-UI v6, Lightweight Charts, SignalR Client, Axios
-
 #### 4. Stock Purchases
-Track your stock purchases and receive automatic sell signal alerts via email when any of your stocks trigger sell rules.
+Track your stock purchases and receive automatic email alerts when your stocks trigger sell rules.
 
 <img width="1455" height="434" alt="image" src="https://github.com/user-attachments/assets/e984585b-f6be-48a6-8193-020581f3b3b5" />
 
+**Technologies**: React 19, TypeScript 5.7, Vite, Material-UI v6, Lightweight Charts, SignalR
+
 ### EpisodicPivotAnalyser.FrontEnd (Primary Dashboard)
 
-**Role**: Main monitoring dashboard for viewing real-time alerts and system status.
+Main monitoring dashboard for viewing real-time alerts and system status. Built with React 19 + TypeScript.
 
 <img width="1546" height="1326" alt="image" src="https://github.com/user-attachments/assets/277e9ca1-51ad-4350-9db7-cf8e54af6c5f" />
 
-**Architecture**: React 19 + TypeScript SPA with Material-UI.
+**Features**: Real-time alert streaming via SignalR (sub-100ms latency), sortable/filterable alert list, stock cards with technical indicators, quick search by symbol
 
-**Features**:
-- Real-time alert streaming via SignalR (sub-100ms latency)
-- Alert list with sorting, filtering, pagination
-- Stock cards with technical indicators
-- Quick search by symbol
-- Market status indicators
+**Technologies**: React 19, TypeScript, Material-UI, SignalR, Axios
 
-**Key Technologies**: React 19, TypeScript, Material-UI, SignalR, Axios
+### Other Applications
 
-### EpisodicPivotAnalyser.TrainingDashboard
-
-**Role**: Manual annotation tool for creating ML training datasets.
-
-**Architecture**: Next.js application with server-side rendering.
-
-**Features**:
-- Side-by-side chart comparison for buy candidates
-- Manual "Buy" / "Ignore" tagging interface
+**EpisodicPivotAnalyser.TrainingDashboard**
+- Next.js application for manual ML training data annotation
+- Side-by-side chart comparison with "Buy"/"Ignore" tagging
 - Exports tagged data to JSON for ML training
-- Enables human-in-the-loop dataset curation
 
-**Key Technologies**: Next.js, React, TypeScript, Chart.js
+**EpisodicPivotAnalyser.Common**
+- Core business logic shared across all applications
+- `IRule` and `ISellRule` interfaces with 16+ buy and 17+ sell rule implementations
+- Domain models and technical indicator utilities (leverages Skender.Stock.Indicators)
+- Zero framework dependencies (pure domain logic)
 
-### EpisodicPivotAnalyser.Common (Shared Domain Library)
+**EpisodicPivotAnalyser.Aspire**
+- .NET Aspire orchestration for local development
+- Starts all services with single `dotnet run` command
+- Command-line options: `--all`, `--stockdata`, `--frontends`, `--alerter`, `--verbose`
+- Unified observability dashboard with OpenTelemetry
 
-**Role**: Core business logic shared across all applications.
-
-**Architecture**: Class library with zero framework dependencies (pure domain logic).
-
-**Contains**:
-- `IRule` and `ISellRule` interfaces
-- 16+ buy rule implementations (e.g., `GapUpRule`, `MovingAverageCrossRule`)
-- 17+ sell rule implementations (e.g., `StopLossRule`, `TrailingStopRule`, `ProfitTargetRule`)
-- `IStockPickingStrategy` for rule composition
-- Domain models (Stock, Alert, PriceBar, etc.)
-- Service interfaces (repository abstractions)
-- Technical indicator utilities (leveraging Skender.Stock.Indicators)
-
-**Design Patterns**: Strategy Pattern, Repository Pattern, Dependency Inversion
-
-### EpisodicPivotAnalyser.Aspire (Orchestration)
-
-**Role**: .NET Aspire orchestration host for local development.
-
-**Architecture**: .NET Aspire AppHost project.
-
-**Responsibilities**:
-- Starts all services with a single `dotnet run` command
-- Manages dependencies (SQL Server, Redis, RabbitMQ containers)
-- Configures service discovery and environment variables
-- Provides unified observability dashboard (OpenTelemetry)
-- Aggregates logs from all services (Serilog integration)
-
-**Command-Line Options**:
-- `--all`: Start entire stack (API + 3 frontends + Alerter + infrastructure)
-- `--stockdata`: API only
-- `--frontends`: All 3 frontends only
-- `--alerter`: Alerter with dependencies
-- `--verbose`: Enable debug logging
-
-### Supporting Projects
-
-**EpisodicPivotAnalyser.MassTransit**
-- RabbitMQ integration via MassTransit
-- Event consumers and publishers
-- Message contract definitions
-
-**EpisodicPivotAnalyser.Migrations**
-- Database migration scripts (SQL Server)
-- Schema versioning with Fluent Migrator
-
-**EpisodicPivotAnalyser.EarningsCsvExporter**
-- Utility for exporting earnings data to CSV
-- Used for external analysis and reporting
-
-**EpisodicPivotAnalyser.ConsoleApp**
-- CLI tools for testing and data operations
-- Contains historical JSON training data
-
-**Integration.Tests / EpisodicPivotAnalyser.Common.Tests / EpisodicPivotAnalyser.Alerter.Tests**
-- Comprehensive test suites (>80% coverage on core logic)
-- Unit tests for individual rules
-- Integration tests for API contracts (OpenAPI validation)
-- End-to-end tests for rule engine workflows
+**Supporting Projects**: MassTransit (RabbitMQ integration), Migrations (Fluent Migrator), EarningsCsvExporter, ConsoleApp, Integration/Unit Tests (>80% coverage)
 
 ---
 
 ## Technology Stack
 
-### Backend (.NET)
-- **.NET 10**: Modern cross-platform runtime with C# 13
-- **ASP.NET Core**: Minimal APIs with endpoint routing
-- **SignalR**: Real-time WebSocket communication
-- **MassTransit**: Message bus abstraction over RabbitMQ
-- **Dapper**: High-performance micro-ORM for SQL Server
-- **ML.NET 4.0**: Cross-platform machine learning framework
-- **LightGBM**: Fast gradient boosting for structured data
-- **Serilog**: Structured logging with enrichers and sinks
+**Backend**: .NET 10, ASP.NET Core, SignalR, MassTransit, Dapper, ML.NET 4.0, LightGBM, Serilog
 
-### Frontend (JavaScript/TypeScript)
-- **React 18/19**: Modern hooks-based UI framework
-- **TypeScript 5.7**: Type-safe JavaScript with strict mode
-- **Next.js**: React framework with SSR for TrainingDashboard
-- **Vite**: Fast HMR and optimized production builds
-- **Material-UI v6**: Professional component library
-- **Lightweight Charts**: High-performance financial charting
-- **SignalR Client**: WebSocket client library
-- **Axios**: HTTP client for REST APIs
+**Frontend**: React 18/19, TypeScript 5.7, Next.js, Vite, Material-UI v6, Lightweight Charts, SignalR Client, Axios
 
-### Infrastructure & Data
-- **SQL Server**: Relational database for alerts, prices, training data
-- **Redis**: In-memory cache for frequently accessed reference data
-- **RabbitMQ**: Message broker for async event distribution
-- **.NET Aspire**: Local orchestration with Docker Compose-like experience
-- **Polygon.io API**: Market data feed (OHLC, earnings, fundamentals)
-- **Skender.Stock.Indicators**: 50+ technical analysis indicators
+**Infrastructure**: SQL Server, Redis, RabbitMQ, .NET Aspire, Polygon.io API, Skender.Stock.Indicators
 
-### DevOps & Observability
-- **OpenTelemetry**: Distributed tracing and metrics collection
-- **Serilog**: Structured logging with correlation IDs
-- **Azure Pipelines**: CI/CD automation (azure-pipelines.yml)
-- **.NET Aspire Dashboard**: Real-time service health monitoring
+**DevOps**: OpenTelemetry, Serilog, Azure Pipelines
 
 ---
 
-## Key Architectural Patterns
+## Key Patterns
 
 - **Strategy Pattern**: Composable rule engines via `IRule` and `IStockPickingStrategy`
-- **Repository Pattern**: Data access abstraction with interface-based contracts
-- **Dependency Injection**: Constructor injection throughout (avoiding service locator anti-pattern)
-- **CQRS-lite**: Separate read models (dashboards) from write models (Alerter state)
-- **Event-Driven Architecture**: Async messaging via MassTransit for loose coupling
-- **Ports and Adapters (Hexagonal)**: Domain logic in Common library, isolated from frameworks
-- **Parallel Processing**: Multi-core CPU utilization for data-intensive operations
-- **Progress Reporting**: IProgress<T> pattern for long-running operations with real-time UI updates
+- **Repository Pattern**: Data access abstraction
+- **Dependency Injection**: Constructor injection throughout
+- **Event-Driven Architecture**: Async messaging via MassTransit
+- **Ports and Adapters**: Domain logic isolated from frameworks
+- **Parallel Processing**: Multi-core CPU utilization for data operations
+- **Progress Reporting**: IProgress<T> for long-running operations with real-time UI updates
 
 ---
 
